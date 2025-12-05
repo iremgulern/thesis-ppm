@@ -1,0 +1,8 @@
+pandas
+numpy
+deep-translator
+matplotlib
+seaborn
+scikit-learn
+xgboost
+shap
