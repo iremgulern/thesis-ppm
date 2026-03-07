@@ -1,14 +1,21 @@
 import pandas as pd
 from src import config
 
+
 def clean_data(df):
     """
-    Minimalist cleaner specific to the TJSP dataset structure.
+    Generic data cleaning: Duplicates, Currency, Boolean, Dates, Artifacts.
     """
     df = df.copy()
-    print("- Cleaning data (Vectorized)...")
+    initial_rows = len(df)
+    print("- Cleaning data...")
 
-    # Clean Currency: "17.284,24" -> 17284.24
+    # 1. Remove exact duplicates
+    df = df.drop_duplicates()
+    if len(df) < initial_rows:
+        print(f"  - Dropped {initial_rows - len(df)} duplicate rows.")
+
+    # 2. Clean Currency (Generic)
     if 'claim_amount' in df.columns:
         df['claim_amount'] = (
             df['claim_amount']
@@ -18,18 +25,50 @@ def clean_data(df):
         )
         df['claim_amount'] = pd.to_numeric(df['claim_amount'], errors='coerce').fillna(0)
 
-    # Clean Boolean: "VERDADEIRO" -> 1
+    # 3. Clean Boolean (Generic)
     if 'digital' in df.columns:
         df['digital'] = (df['digital'].astype(str).str.upper().str.strip() == 'VERDADEIRO').astype(int)
 
-    # Clean Dates: "01/06/2020" -> Datetime
-    for col in config.DATE_COLS + config.DATETIME_COLS:
+    # 4. Clean Dates
+    for col in config.DATE_COLS:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], dayfirst=True, errors='coerce')
 
-    # Sorting (Essential for Process Mining: Case -> Date -> Order)
-    sort_cols = [c for c in ['lawsuit_id', 'date', 'order'] if c in df.columns]
+    # 5. Filter Date Artifacts (Generic Year Range 1990-2030)
+    if config.COL_DATE in df.columns:
+        mask_valid = (df[config.COL_DATE].dt.year >= 1990) & (df[config.COL_DATE].dt.year <= 2030)
+        invalid_count = (~mask_valid).sum()
+        if invalid_count > 0:
+            print(f"  - Dropped {invalid_count} events with invalid dates.")
+            df = df[mask_valid]
+
+    # 6. Sorting
+    sort_cols = [c for c in [config.COL_CASE_ID, config.COL_DATE, 'order'] if c in df.columns]
     if len(sort_cols) >= 2:
         df = df.sort_values(by=sort_cols)
 
     return df
+
+
+def remove_outliers(df):
+    """
+    Removes extreme outliers (99th percentile) for duration and case length.
+    """
+    print("- Filtering Outliers (99th percentile)...")
+
+    grp = df.groupby(config.COL_CASE_ID)
+    case_stats = grp.agg(
+        duration=(config.COL_DATE, lambda x: (x.max() - x.min()).total_seconds()),
+        length=(config.COL_DATE, 'count')
+    )
+
+    thresh_dur = case_stats['duration'].quantile(0.99)
+    thresh_len = case_stats['length'].quantile(0.99)
+
+    valid_cases = case_stats[
+        (case_stats['duration'] <= thresh_dur) &
+        (case_stats['length'] <= thresh_len)
+        ].index
+
+    df_clean = df[df[config.COL_CASE_ID].isin(valid_cases)].copy()
+    return df_clean

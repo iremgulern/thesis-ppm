@@ -1,24 +1,38 @@
-from pathlib import Path
+import pathlib
 
-# Project Directories
-BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BASE_DIR / "data"
+# --- PATHS ---
+PROJECT_DIR = pathlib.Path(__file__).resolve().parents[1]
+DATA_DIR = PROJECT_DIR / "data"
 DATA_PROCESSED_DIR = DATA_DIR / "processed"
-REPORTS_DIR = BASE_DIR / "reports"
+REPORTS_DIR = PROJECT_DIR / "reports"
 FIGURES_DIR = REPORTS_DIR / "figures"
 
-# File Paths
-RAW_FILENAME = "TJSP-BL-event-log.csv"
 TRANSLATED_FILENAME = "tjsp_translated.csv"
 FEATURED_FILENAME = "tjsp_features.csv"
-TRANSLATION_CACHE_FILE = DATA_DIR / "translation_cache.json"
 MODEL_RESULTS_FILE = REPORTS_DIR / "model_results.csv"
 
-# Data Schema
-CATEGORICAL_COLS = ['movement', 'status', 'class', 'subject_matter', 'court_department']
-CURRENCY_COLS = ['claim_amount']
-DATE_COLS = ['date']
-DATETIME_COLS = ['distribution_date']
+# --- DATASET COLUMNS ---
+# Standardize your dataset column names here
+COL_CASE_ID = 'lawsuit_id'
+COL_DATE = 'date'
+COL_ACTIVITY = 'movement'
+COL_RESOURCE = 'judge'
+COL_STATUS = 'status'
 
-# Formats
-DATE_FORMAT = "%d/%m/%Y"
+# Columns to parse as dates
+DATE_COLS = ['date', 'distribution_date']
+DATETIME_COLS = []
+
+# --- DOMAIN CONFIGURATION ---
+
+# Case Attributes:
+# Static columns to use as baseline features.
+# These will be automatically detected and processed (Target Encoded or Scaled).
+CASE_ATTRIBUTES = [
+    'class',
+    'subject_matter',
+    'court_department',
+    'judge',
+    'claim_amount',
+    'digital'
+]
