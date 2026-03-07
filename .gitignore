@@ -9,4 +9,4 @@ src/preprocessing/__pycache__/
 
 data/processed/tjsp_features.csv
 data/processed/tjsp_translated.csv
-data/raw/TJSP-BL-event-log.csv
+data/TJSP-BL-event-log.csv
